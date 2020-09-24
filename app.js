@@ -1,5 +1,5 @@
 //jshint esversion:6
-
+require("dotenv").config();
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
@@ -7,15 +7,17 @@ const request = require("request");
 const https = require("https");
 
 app.use(express.static("public"));
-app.use(bodyParser.urlencoded({
-  extended: true
-}));
+app.use(
+  bodyParser.urlencoded({
+    extended: true,
+  })
+);
 
-app.get("/", function(req, res) {
+app.get("/", function (req, res) {
   res.sendFile(__dirname + "/signup.html");
 });
 
-app.post("/", function(req, res) {
+app.post("/", function (req, res) {
   const firstName = req.body.fName;
   const lastName = req.body.lName;
   const eMail = req.body.mail;
@@ -27,52 +29,40 @@ app.post("/", function(req, res) {
         status: "subscribed",
         merge_fields: {
           FNAME: firstName,
-          LNAME: lastName
-        }
-      }
-    ]
+          LNAME: lastName,
+        },
+      },
+    ],
   };
 
   const jsonData = JSON.stringify(data);
 
-  const url = "https://us10.api.mailchimp.com/3.0/lists/8b4685ac08";
+  const url = process.env.URL;
   const options = {
     method: "POST",
-    auth: "arthur1:9f668ecdbb3ce50023ef9f932c329a6a-us10"
+    auth: process.env.API_KEY,
   };
 
-const request = https.request(url, options, function(response){
+  const request = https.request(url, options, function (response) {
+    response.on("data", function (data) {
+      console.log(JSON.parse(data));
 
-response.on("data", function(data){
-  console.log(JSON.parse(data));
+      if (response.statusCode === 200) {
+        res.sendFile(__dirname + "/success.html");
+      } else {
+        res.sendFile(__dirname + "/failure.html");
+      }
+    });
+  });
 
-  if (response.statusCode === 200) {
-    res.sendFile(__dirname + "/success.html");
-  } else
-  {res.sendFile(__dirname + "/failure.html");}
-
+  request.write(jsonData);
+  request.end();
 });
 
-});
-
-request.write(jsonData);
-request.end();
-
-});
-
-app.post("/failure", function(req, res){
+app.post("/failure", function (req, res) {
   res.redirect("/");
 });
-// API KEY
-// 9f668ecdbb3ce50023ef9f932c329a6a-us10
 
-// LIST ID
-// 8b4685ac08
-
-
-
-
-
-app.listen(process.env.PORT || 3000, function() {
+app.listen(process.env.PORT || 3000, function () {
   console.log("Server is running on port 3000");
 });
